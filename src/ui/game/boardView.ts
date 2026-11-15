@@ -179,6 +179,7 @@ export class BoardView {
 
   private resize(): void {
     const rect = this.container.getBoundingClientRect();
+    if (rect.width < 40 || rect.height < 40) return; // hidden or not laid out yet
     const w = Math.max(1, rect.width);
     const h = Math.max(1, rect.height);
     this.dpr = Math.min(window.devicePixelRatio || 1, 3);
@@ -460,6 +461,32 @@ export class BoardView {
           this.wonStart = now + 200;
           this.spawnConfetti(now + 200);
           break;
+        case 'garbageSent':
+          this.addText(
+            `Attack! ${e.cells} junk`,
+            this.L.w / 2,
+            boardY + this.L.boardH * 0.2,
+            26,
+            '#ff8a96',
+            1200,
+          );
+          break;
+        case 'garbageReceived':
+          // Junk from the opponent thuds onto the board.
+          if (e.cells.length === 0) break;
+          for (const p of e.cells) this.placed.set(p.row * state.board.width + p.col, now);
+          this.shake = { start: now, dur: 300, mag: Math.min(3 + e.cells.length, 10) };
+          this.addText(
+            `+${e.cells.length} junk!`,
+            this.L.w / 2,
+            boardY + this.L.boardH * 0.5,
+            30,
+            '#c9cfdb',
+            1100,
+          );
+          sfx.garbage();
+          haptics.clear(2);
+          break;
         default:
           break;
       }
@@ -475,6 +502,8 @@ export class BoardView {
       );
     }
     this.fits = handFits(state);
+    // The board may have changed under a piece that's being dragged (incoming junk).
+    if (this.drag) this.updateSnap();
     this.invalidate();
   }
 

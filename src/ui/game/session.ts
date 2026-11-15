@@ -13,7 +13,9 @@ import { apply, type Action, type GameEvent, type GameState } from '../../engine
 import type { DifficultyId } from '../../data/difficulties';
 
 export type SessionMode =
-  { kind: 'endless'; difficulty: DifficultyId } | { kind: 'mission'; levelId: string };
+  | { kind: 'endless'; difficulty: DifficultyId }
+  | { kind: 'mission'; levelId: string }
+  | { kind: 'versus'; player: number };
 
 export type SessionListener = (events: GameEvent[], state: GameState) => void;
 

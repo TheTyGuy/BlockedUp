@@ -197,7 +197,9 @@ rooms/{code}/moves     {uid}/{seq}: that player's actions, in order (append-only
 rooms/{code}/inbox     {uid}/{msgId}: attacks sent TO that player (they delete after applying)
 ```
 
-Next: a local two-board test screen, then the Firebase room/lobby code.
+- **Two-player test screen** (`src/ui/screens/versus.ts`, "2 Player Test" on the home menu): play both sides of a Garbage Attack match on one device. `src/net/localMatch.ts` stands in for the network, delivering each attack to the other player's session.
+
+Next: the Firebase room/lobby code, replacing `LocalMatch` with a networked match.
 
 ## Phase 2 notes
 

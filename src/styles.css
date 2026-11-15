@@ -554,6 +554,98 @@ button {
   display: block;
 }
 
+/* ---------- Two-player test screen ---------- */
+
+.btn-versus {
+  background: linear-gradient(180deg, #ff7a8a, var(--danger));
+  box-shadow: 0 5px 0 #a51d2d;
+}
+.btn-versus:active {
+  box-shadow: 0 2px 0 #a51d2d;
+}
+.vs-chips {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+.vs-chip {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  border-radius: 14px;
+  background: var(--panel);
+  padding: 6px 8px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: 'name score' 'sent score';
+  align-items: center;
+  text-align: left;
+  opacity: 0.7;
+}
+.vs-chip.active {
+  opacity: 1;
+  background: var(--panel-strong);
+  box-shadow: inset 0 0 0 2px var(--primary);
+}
+.vs-chip.bump,
+.vs-mini.bump {
+  animation: bump 0.4s ease-out;
+}
+.vs-name {
+  grid-area: name;
+  font-size: 0.8rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.vs-sent {
+  grid-area: sent;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+.vs-score {
+  grid-area: score;
+  font-size: 1.4rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.vs-mini {
+  flex: none;
+  border: 0;
+  border-radius: 12px;
+  background: var(--panel);
+  padding: 4px 4px 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.vs-mini-canvas {
+  width: 44px;
+  height: 44px;
+  display: block;
+  border-radius: 6px;
+}
+.vs-mini-label {
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.vs-status {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.versus-view {
+  position: absolute;
+  inset: 0;
+}
+.versus-view.inactive {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 /* ---------- Overlays ---------- */
 
 .overlay {

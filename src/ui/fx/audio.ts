@@ -84,6 +84,11 @@ export const sfx = {
         vol: 0.4,
       })),
     ),
+  garbage: () =>
+    play([
+      { freq: 110, to: 55, dur: 0.22, type: 'sawtooth', vol: 0.22 },
+      { freq: 70, to: 40, dur: 0.3, delay: 0.05, type: 'square', vol: 0.15 },
+    ]),
   lose: () =>
     play([
       { freq: 392, to: 370, dur: 0.25, type: 'triangle', vol: 0.3 },

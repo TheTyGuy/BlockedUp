@@ -6,6 +6,7 @@ import { DIFFICULTIES, DIFFICULTY_ORDER } from '../../data/difficulties';
 import { LEVELS } from '../../data/levels';
 import { startEndless, startMission } from './game';
 import { BLOCK_COLORS } from '../theme';
+import { versusTestScreen } from './versus';
 
 function logo(): HTMLElement {
   // Little block-letter logo made of coloured squares.
@@ -52,6 +53,12 @@ export const homeScreen = (app: App): Screen => {
           { class: 'btn btn-big btn-secondary', onclick: () => app.show(levelsScreen) },
           'Missions',
           h('small', {}, `★ ${stars} / ${LEVELS.length * 3}`),
+        ),
+        h(
+          'button',
+          { class: 'btn btn-versus', onclick: () => app.show(versusTestScreen) },
+          '2 Player Test',
+          h('small', {}, 'Garbage Attack · play both sides'),
         ),
         h(
           'button',
