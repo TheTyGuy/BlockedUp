@@ -54,7 +54,7 @@ export function randomCode(random: () => number = Math.random): string {
   return code;
 }
 
-export type RoomErrorReason = 'not-found' | 'full' | 'version' | 'failed';
+export type RoomErrorReason = 'not-found' | 'full' | 'version' | 'denied' | 'failed';
 
 export class RoomError extends Error {
   constructor(
@@ -64,6 +64,16 @@ export class RoomError extends Error {
     super(message);
   }
 }
+
+/** Did the server's security rules refuse this (as opposed to a network problem)? */
+function isDenied(e: unknown): boolean {
+  const err = e as { code?: unknown; message?: unknown } | null;
+  return /permission/i.test(`${String(err?.code ?? '')} ${String(err?.message ?? '')}`);
+}
+
+const DENIED_MESSAGE =
+  "The game server refused the request. Online play isn't switched on yet: " +
+  'the database rules need to be published in Firebase.';
 
 interface RoomMeta {
   host: string;
@@ -116,7 +126,9 @@ export class OnlineMatch implements VersusMatch {
 
   /** Host: create a new room and wait for someone to join. */
   static async create(backend: RoomBackend, seed: number): Promise<OnlineMatch> {
-    for (let attempt = 0; attempt < 6; attempt++) {
+    const attempts = 6;
+    let denials = 0;
+    for (let attempt = 0; attempt < attempts; attempt++) {
       const code = randomCode();
       const meta = {
         host: backend.uid,
@@ -129,13 +141,17 @@ export class OnlineMatch implements VersusMatch {
         // The rules only allow creating a room that doesn't exist yet, so a
         // code that's already taken is refused and we try another.
         await backend.set(`rooms/${code}/meta`, meta);
-      } catch {
+      } catch (e) {
+        if (isDenied(e)) denials++;
         continue;
       }
       const match = new OnlineMatch(backend, code, { ...meta, seed: seed >>> 0 }, 0);
       await match.start(false);
       return match;
     }
+    // One refusal can be a code that's already taken; every attempt refused
+    // means the rules themselves don't allow creating rooms.
+    if (denials === attempts) throw new RoomError('denied', DENIED_MESSAGE);
     throw new RoomError('failed', "Couldn't create a room. Check your connection and try again.");
   }
 
@@ -146,7 +162,8 @@ export class OnlineMatch implements VersusMatch {
     let meta: RoomMeta | null;
     try {
       meta = (await backend.get(`rooms/${code}/meta`)) as RoomMeta | null;
-    } catch {
+    } catch (e) {
+      if (isDenied(e)) throw new RoomError('denied', DENIED_MESSAGE);
       throw new RoomError('failed', "Couldn't reach the game server. Check your connection.");
     }
     if (!meta) throw new RoomError('not-found', `No room with code ${code}.`);
