@@ -180,6 +180,25 @@ If a goal needs information that no event carries yet, emit a new event from `en
 - `npm test` covers placement validity, single and simultaneous row+column clears (the shared cell counts once), obstacles, scoring and combos, the all-clear bonus, dealing, game-over detection, Easy's fit guarantee, every mission goal type, move limits, star rating, level-data validation, seeded RNG determinism and JSON round-tripping.
 - Add `?debug` to the URL to expose `window.__session`, `window.__engine` and `window.__view` for automated play-testing (e.g. with Playwright).
 
+## Phase 2 progress (two-player)
+
+In place so far (nothing player-visible yet):
+
+- **Engine: Garbage Attack rules.** With `config.versus` set, multi-clears and combos emit a `garbageSent` event. The opponent applies a `receiveGarbage` action, which drops stone blocks into random empty cells using the seeded RNG. Junk never completes a line by itself. Tune the amounts in `src/data/versus.ts`. `tests/versus.test.ts` includes the key sync test: replaying a player's action log from the shared seed reproduces their exact board.
+- **Firebase project `blockedup`:** Realtime Database + anonymous sign-in. The web config is in `src/net/firebaseConfig.ts` (public identifiers, safe to commit).
+- **Security rules** in `database.rules.json`: only a room's two players can read it; each player can only append to their own move list and add to the opponent's inbox; moves can't be rewritten. Publish them by pasting the file into **Firebase console → Realtime Database → Rules**, or with `npx firebase-tools deploy --only database`.
+
+Room layout the rules expect:
+
+```
+rooms/{code}/meta      host, guest, mode, seed, createdAt, status
+rooms/{code}/players   {uid}: presence / display info
+rooms/{code}/moves     {uid}/{seq}: that player's actions, in order (append-only)
+rooms/{code}/inbox     {uid}/{msgId}: attacks sent TO that player (they delete after applying)
+```
+
+Next: a local two-board test screen, then the Firebase room/lobby code.
+
 ## Phase 2 notes
 
 Phase 2 adds two-player modes on separate phones. Phase 1 was built so these slot in without reworking the engine:
