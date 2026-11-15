@@ -121,6 +121,24 @@ export interface MissionConfig {
   stars?: { two?: StarCriterion; three?: StarCriterion };
 }
 
+/**
+ * Versus (two-player) rules. When present, line clears produce a
+ * `garbageSent` event the network layer forwards to the opponent.
+ */
+export interface VersusConfig {
+  /** Junk cells sent for clearing N lines at once: index = lines (index 0 unused). */
+  garbageByLines: number[];
+  /** Extra junk cells per combo step above 1. */
+  comboBonus: number;
+  /** Cap on junk cells from a single placement. */
+  maxPerAttack: number;
+  /**
+   * Chance (0..1) that each piece of incoming junk SMASHES one of the
+   * receiver's coloured blocks (removing it) instead of landing as a stone.
+   */
+  smashChance: number;
+}
+
 export interface GameConfig {
   boardWidth: number;
   boardHeight: number;
@@ -131,6 +149,7 @@ export interface GameConfig {
   /** Pre-filled cells at game start (obstacles or coloured blocks). */
   initialCells?: { row: number; col: number; cell: Cell }[];
   mission?: MissionConfig;
+  versus?: VersusConfig;
 }
 
 // ---------------------------------------------------------------------------
@@ -191,7 +210,14 @@ export interface GameState {
  * Actions are the ONLY way to change state. Phase 2 will add more variants
  * (e.g. `receiveGarbage`, `receiveGift`) without touching existing ones.
  */
-export type Action = { type: 'place'; handIndex: number; row: number; col: number };
+export type Action =
+  | { type: 'place'; handIndex: number; row: number; col: number }
+  /**
+   * Versus: junk from the opponent lands on this board. The receiving player
+   * applies it in their own action sequence (between placements), so every
+   * board's history has exactly one owner and both phones stay in sync.
+   */
+  | { type: 'receiveGarbage'; cells: number };
 
 export interface ClearedCell extends Point {
   cell: Cell;
@@ -222,7 +248,14 @@ export type GameEvent =
   | { type: 'handDealt'; hand: HandPiece[] }
   | { type: 'goalProgress'; index: number; progress: number; target: number; complete: boolean }
   | { type: 'gameWon'; stars: number }
-  | { type: 'gameOver'; reason: EndReason };
+  | { type: 'gameOver'; reason: EndReason }
+  /** Versus: this placement attacks the opponent with `cells` junk blocks. */
+  | { type: 'garbageSent'; cells: number }
+  /**
+   * Versus: junk hit this board. `cells` = stones that landed in empty spots;
+   * `smashed` = existing blocks that were broken off and removed.
+   */
+  | { type: 'garbageReceived'; cells: Point[]; smashed: ClearedCell[] };
 
 export interface ApplyResult {
   state: GameState;

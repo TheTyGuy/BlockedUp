@@ -179,6 +179,7 @@ export class BoardView {
 
   private resize(): void {
     const rect = this.container.getBoundingClientRect();
+    if (rect.width < 40 || rect.height < 40) return; // hidden or not laid out yet
     const w = Math.max(1, rect.width);
     const h = Math.max(1, rect.height);
     this.dpr = Math.min(window.devicePixelRatio || 1, 3);
@@ -460,6 +461,54 @@ export class BoardView {
           this.wonStart = now + 200;
           this.spawnConfetti(now + 200);
           break;
+        case 'garbageSent':
+          this.addText(
+            `Attack! ${e.cells} junk`,
+            this.L.w / 2,
+            boardY + this.L.boardH * 0.2,
+            26,
+            '#ff8a96',
+            1200,
+          );
+          break;
+        case 'garbageReceived':
+          // Junk from the opponent: stones thud into empty cells, and/or
+          // existing blocks get smashed off the board.
+          if (e.cells.length + e.smashed.length === 0) break;
+          for (const p of e.cells) this.placed.set(p.row * state.board.width + p.col, now);
+          e.smashed.forEach((c, i) => {
+            const color = colorOf(c.cell.color);
+            this.pops.push({ row: c.row, col: c.col, color, start: now + i * 70 });
+            this.spawnParticles(c.row, c.col, color, now + i * 70, 3);
+          });
+          this.shake = {
+            start: now,
+            dur: 300,
+            mag: Math.min(3 + e.cells.length + e.smashed.length, 10),
+          };
+          if (e.cells.length > 0) {
+            this.addText(
+              `+${e.cells.length} junk!`,
+              this.L.w / 2,
+              boardY + this.L.boardH * 0.42,
+              30,
+              '#c9cfdb',
+              1100,
+            );
+          }
+          if (e.smashed.length > 0) {
+            this.addText(
+              `${e.smashed.length} smashed!`,
+              this.L.w / 2,
+              boardY + this.L.boardH * 0.58,
+              30,
+              '#ff8a96',
+              1100,
+            );
+          }
+          sfx.garbage();
+          haptics.clear(2);
+          break;
         default:
           break;
       }
@@ -475,6 +524,8 @@ export class BoardView {
       );
     }
     this.fits = handFits(state);
+    // The board may have changed under a piece that's being dragged (incoming junk).
+    if (this.drag) this.updateSnap();
     this.invalidate();
   }
 

@@ -24,6 +24,7 @@ npm run dev        # dev server (also on your LAN: open the printed URL on your 
 | `npm run build`              | Type-check, then build to `dist/`                                 |
 | `npm run preview`            | Serve the production build (service worker is active here)        |
 | `npm test`                   | Run the Vitest unit tests once (`npm run test:watch` to watch)    |
+| `npm run test:emulator`      | Multiplayer + security-rule tests against the Firebase emulator   |
 | `npm run lint`               | ESLint                                                            |
 | `npm run format`             | Prettier (`format:check` for CI)                                  |
 | `npm run simulate [-- runs]` | A greedy bot plays every level and prints win rates and stars     |
@@ -179,6 +180,56 @@ If a goal needs information that no event carries yet, emit a new event from `en
 
 - `npm test` covers placement validity, single and simultaneous row+column clears (the shared cell counts once), obstacles, scoring and combos, the all-clear bonus, dealing, game-over detection, Easy's fit guarantee, every mission goal type, move limits, star rating, level-data validation, seeded RNG determinism and JSON round-tripping.
 - Add `?debug` to the URL to expose `window.__session`, `window.__engine` and `window.__view` for automated play-testing (e.g. with Playwright).
+
+## Two-player (Phase 2, in progress)
+
+**Garbage Attack** is playable two ways from **2 Players** on the home screen:
+
+- **Online:** one player creates a room and shares the 4-character code or invite link (`…/?room=CODE`); the other joins. Each phone plays its own board and can peek at the opponent's.
+- **Same device:** two people share one phone and switch sides.
+
+Rules: clearing 2+ lines at once, or clearing on back-to-back placements, sends junk. Each piece of junk either lands as a stone in a random empty cell or smashes one of the receiver's coloured blocks. Junk never completes a line and never smashes stones. Tune it in `src/data/versus.ts`.
+
+### How online play works
+
+```
+src/net/
+  match.ts            VersusMatch: what the versus screen needs from any match
+  localMatch.ts       same-device match
+  onlineMatch.ts      room create / join / resume + move sync
+  backend.ts          RoomBackend: the few realtime-database operations used
+  firebaseBackend.ts  RoomBackend on Firebase (loaded on demand, only when going online)
+  memoryBackend.ts    RoomBackend in memory, for unit tests
+  firebaseConfig.ts   public web config for the Firebase project
+```
+
+- A room holds a shared **seed**. Each player owns one append-only list of their own actions. Because the engine is deterministic, "seed + a player's actions" fully describes their board, so each phone rebuilds the opponent's board by replaying their list.
+- Attacks go to the target's **inbox**; the target turns each one into a `receiveGarbage` action in its own list. Every list has a single writer, so the phones can't disagree about ordering.
+- A reload or dropped connection just replays the lists (the room code stays in the URL), so matches survive both.
+- `ROOM_MODE` in `onlineMatch.ts` carries a rules version. Bump it whenever a change would make two phones on different builds disagree (engine rules, pieces, versus tuning); mismatched phones are refused instead of desyncing.
+
+Database layout:
+
+```
+rooms/{code}/meta      host, guest, mode, seed, createdAt, status
+rooms/{code}/players   {uid}: { online, left }
+rooms/{code}/moves     {uid}/{m000000…}: that player's actions, in order (append-only)
+rooms/{code}/inbox     {uid}/{msgId}: attacks sent TO that player (they delete after applying)
+```
+
+### Firebase setup
+
+Project `blockedup`: **Realtime Database** + **Anonymous sign-in** (no accounts). Security rules live in `database.rules.json`: only a room's two players can read it, each player can only append their own moves and add to the opponent's inbox, and nothing can be edited afterwards. **Publish rule changes** by pasting the file into Firebase console → Realtime Database → Rules (or `npx firebase deploy --only database`).
+
+Old rooms are not cleaned up automatically yet. They are tiny, but a scheduled cleanup (or a TTL rule) is worth adding before wide release.
+
+### Testing multiplayer
+
+- `npm test` covers the match logic with two simulated phones (`tests/onlineMatch.test.ts`): joining, attacks, full matches staying in sync, reloads, disconnects, forfeits.
+- `npm run test:emulator` runs the real Firebase SDK and the real `database.rules.json` against the local Realtime Database emulator: a full match, plus checks that outsiders and cheats are refused. Needs Java; download the emulator once with `npx firebase setup:emulators:database`.
+- To click through online play locally without touching the live project: `scripts/db-emulator.sh start`, `npm run dev`, then open `http://localhost:5173/?emulator` in two browser tabs.
+
+Still to come: Gift Pieces, Combo Curses and the co-op modes (see below).
 
 ## Phase 2 notes
 

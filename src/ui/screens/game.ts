@@ -72,6 +72,7 @@ function updateGoalRow(row: HTMLElement, g: GoalProgress): void {
 
 export function gameScreen(app: App, session: GameSession): Screen {
   const mode = session.mode;
+  if (mode.kind === 'versus') throw new Error('Versus sessions use the versus screen');
   const level = mode.kind === 'mission' ? LEVELS[levelIndex(mode.levelId)] : null;
   const state0 = session.state;
 

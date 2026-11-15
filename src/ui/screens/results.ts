@@ -16,6 +16,7 @@ function stat(label: string, value: string | number): HTMLElement {
 export function resultsScreen(app: App, session: GameSession, newBest: boolean): Screen {
   const s = session.state;
   const mode = session.mode;
+  if (mode.kind === 'versus') throw new Error('Versus sessions use the versus screen');
   const stats = h(
     'div',
     { class: 'stats' },

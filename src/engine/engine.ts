@@ -32,6 +32,7 @@ import {
 import { getShape } from './pieces';
 import { Rng, seedFrom } from './rng';
 import { clearPoints, placementPoints } from './scoring';
+import { dropJunk, garbageFor } from './versus';
 import type { Action, ApplyResult, GameConfig, GameEvent, GameState, Point } from './types';
 
 /** Create a new game. The first hand is dealt immediately. */
@@ -79,9 +80,11 @@ export function apply(state: GameState, action: Action): ApplyResult {
   switch (action.type) {
     case 'place':
       return applyPlace(state, action);
+    case 'receiveGarbage':
+      return applyGarbage(state, action);
     default: {
-      const unknown: never = action.type;
-      return invalid(state, `Unknown action: ${String(unknown)}`);
+      const unknown: never = action;
+      return invalid(state, `Unknown action: ${(unknown as { type: string }).type}`);
     }
   }
 }
@@ -149,6 +152,10 @@ function applyPlace(state: GameState, action: Extract<Action, { type: 'place' }>
   }
   stats.maxCombo = Math.max(stats.maxCombo, combo);
   if (combo !== state.combo) events.push({ type: 'comboChanged', combo, previous: state.combo });
+  if (cfg.versus && lines > 0) {
+    const cells = garbageFor(cfg.versus, lines, combo);
+    if (cells > 0) events.push({ type: 'garbageSent', cells });
+  }
   events.push({ type: 'scoreChanged', score, delta: score - startScore });
 
   // 3. Update the hand; deal a new one once every slot has been played.
@@ -196,6 +203,30 @@ function applyPlace(state: GameState, action: Extract<Action, { type: 'place' }>
   }
 
   // 5. Game over when nothing left in hand fits anywhere.
+  if (!handFits(next).some(Boolean)) {
+    next = { ...next, status: 'lost', endReason: 'noFit' };
+    events.push({ type: 'gameOver', reason: 'noFit' });
+  }
+  return { state: next, events };
+}
+
+/** Versus: drop junk blocks from the opponent onto this board. */
+function applyGarbage(
+  state: GameState,
+  action: Extract<Action, { type: 'receiveGarbage' }>,
+): ApplyResult {
+  if (state.status !== 'playing') return invalid(state, 'Game is over');
+  const max = state.board.width * state.board.height;
+  if (!Number.isInteger(action.cells) || action.cells < 0 || action.cells > max) {
+    return invalid(state, 'Bad garbage amount');
+  }
+  const rng = new Rng(state.rng);
+  const smashChance = state.config.versus?.smashChance ?? 0;
+  const dropped = dropJunk(state.board, action.cells, rng, smashChance);
+  let next: GameState = { ...state, board: dropped.board, rng: rng.state };
+  const events: GameEvent[] = [
+    { type: 'garbageReceived', cells: dropped.cells, smashed: dropped.smashed },
+  ];
   if (!handFits(next).some(Boolean)) {
     next = { ...next, status: 'lost', endReason: 'noFit' };
     events.push({ type: 'gameOver', reason: 'noFit' });

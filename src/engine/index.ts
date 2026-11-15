@@ -5,3 +5,4 @@ export { PIECES, getShape, type PieceShape } from './pieces';
 export { seedFrom, seedFromString } from './rng';
 export { registerGoal, getGoal, type GoalDefinition } from './missions/goals';
 export { computeStars } from './missions/tracker';
+export { garbageFor } from './versus';
