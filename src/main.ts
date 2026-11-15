@@ -2,6 +2,7 @@ import './styles.css';
 import { App } from './ui/app';
 import { unlockAudio } from './ui/fx/audio';
 import { requestPersistentStorage } from './ui/storage';
+import { onlineRoomScreen } from './ui/screens/lobby';
 import { homeScreen } from './ui/screens/menus';
 
 // Audio can only start after a user gesture on mobile.
@@ -17,7 +18,10 @@ for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
 requestPersistentStorage();
 
 const app = new App(document.getElementById('app')!);
-app.show(homeScreen);
+// An invite link (…?room=CODE) goes straight to that room; so does a reload mid-match.
+const room = new URLSearchParams(location.search).get('room');
+if (room) app.show((a) => onlineRoomScreen(a, { join: room }));
+else app.show(homeScreen);
 
 // Offline support (production builds only, so dev hot-reload isn't cached).
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {

@@ -1,22 +1,23 @@
 /**
  * LocalMatch: a two-player Garbage Attack match on ONE device.
  *
- * It plays the role the network will play later: both players start from the
- * same seed (so they are dealt the same pieces), and when one player's
- * placement emits `garbageSent`, the junk is delivered to the other player as
- * a `receiveGarbage` action. The Firebase version will keep this exact flow
- * and only change how the attack travels between the two sessions.
+ * Both players start from the same seed (so they are dealt the same pieces),
+ * and when one player's placement emits `garbageSent`, the junk is delivered
+ * to the other player as a `receiveGarbage` action. OnlineMatch keeps this
+ * exact flow and only changes how the attack travels between the sessions.
  */
 import { createGame } from '../engine';
 import { garbageAttackConfig } from '../data/versus';
 import { GameSession } from '../ui/game/session';
+import type { PlayerIndex, VersusMatch } from './match';
 
-export type PlayerIndex = 0 | 1;
+export type { PlayerIndex } from './match';
 
-export class LocalMatch {
+export class LocalMatch implements VersusMatch {
   readonly sessions: [GameSession, GameSession];
-  /** Junk cells each player has sent so far. */
   readonly sent: [number, number] = [0, 0];
+  readonly names: [string, string] = ['Player 1', 'Player 2'];
+  readonly controls: [boolean, boolean] = [true, true];
   private unsubs: (() => void)[] = [];
 
   constructor(readonly seed: number) {
@@ -46,6 +47,14 @@ export class LocalMatch {
     if (this.sessions[1].state.status === 'lost') return 0;
     return null;
   }
+
+  notice(): string | null {
+    return null;
+  }
+  onChange(): () => void {
+    return () => {};
+  }
+  leave(): void {}
 
   destroy(): void {
     for (const u of this.unsubs) u();

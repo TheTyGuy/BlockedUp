@@ -41,7 +41,7 @@
           "$uid": {
             "$msgId": {
               ".write": "auth != null && (root.child('rooms').child($roomId).child('meta/host').val() === auth.uid || root.child('rooms').child($roomId).child('meta/guest').val() === auth.uid) && ((auth.uid !== $uid && !data.exists()) || (auth.uid === $uid && !newData.exists()))",
-              ".validate": "newData.hasChildren(['type', 'from'])"
+              ".validate": "newData.hasChildren(['type', 'from']) && newData.child('from').val() === auth.uid"
             }
           }
         }

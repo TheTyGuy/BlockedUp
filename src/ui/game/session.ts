@@ -5,9 +5,9 @@
  * new state and notifies listeners with the resulting events. Views never
  * mutate state or decide game rules themselves.
  *
- * Phase 2: a networked session can implement the same interface — sending
- * local actions to the peer/server and feeding remote actions (garbage, gifts)
- * back through the same `apply` → events path.
+ * Multiplayer builds on this: a match (see src/net) listens to a session to
+ * send the player's actions to the opponent, and dispatches remote actions
+ * (incoming junk) into it.
  */
 import { apply, type Action, type GameEvent, type GameState } from '../../engine';
 import type { DifficultyId } from '../../data/difficulties';
@@ -17,7 +17,7 @@ export type SessionMode =
   | { kind: 'mission'; levelId: string }
   | { kind: 'versus'; player: number };
 
-export type SessionListener = (events: GameEvent[], state: GameState) => void;
+export type SessionListener = (events: GameEvent[], state: GameState, action: Action) => void;
 
 export class GameSession {
   private listeners = new Set<SessionListener>();
@@ -30,7 +30,7 @@ export class GameSession {
   dispatch(action: Action): GameEvent[] {
     const { state, events } = apply(this.state, action);
     this.state = state;
-    for (const l of this.listeners) l(events, state);
+    for (const l of this.listeners) l(events, state, action);
     return events;
   }
 

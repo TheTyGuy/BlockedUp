@@ -6,6 +6,7 @@ export default defineConfig({
   build: { target: 'es2020' },
   test: {
     include: ['tests/**/*.test.ts'],
+    exclude: ['tests/emulator/**'],
     environment: 'node',
   },
 });
