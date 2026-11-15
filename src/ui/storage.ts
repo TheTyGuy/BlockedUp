@@ -1,63 +1,61 @@
-/** Local persistence (settings, best scores, level progress, in-progress Endless games). */
+/**
+ * Local persistence (settings, best scores, level progress, in-progress
+ * Endless games). The format, migrations and progress-safety rules are in
+ * saveFormat.ts.
+ */
 import type { GameState } from '../engine';
 import type { DifficultyId } from '../data/difficulties';
+import { LEVELS } from '../data/levels';
+import {
+  STORAGE_KEY,
+  defaultSave,
+  isResumableGame,
+  parseSave,
+  type LevelProgress,
+  type SaveData,
+  type Settings,
+} from './saveFormat';
 
-export interface Settings {
-  sound: boolean;
-  haptics: boolean;
-  patterns: boolean;
-}
-
-export interface LevelProgress {
-  stars: number;
-  bestScore: number;
-}
-
-export interface SaveData {
-  v: 1;
-  settings: Settings;
-  best: Partial<Record<DifficultyId, number>>;
-  levels: Record<string, LevelProgress>;
-  /** Unfinished Endless games, so closing the tab doesn't lose a run. */
-  endless: Partial<Record<DifficultyId, GameState>>;
-}
-
-const KEY = 'blockedup:v1';
-
-const defaults = (): SaveData => ({
-  v: 1,
-  settings: { sound: true, haptics: true, patterns: true },
-  best: {},
-  levels: {},
-  endless: {},
-});
+export type { LevelProgress, Settings } from './saveFormat';
 
 let data: SaveData = load();
 
 function load(): SaveData {
   try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return defaults();
-    const parsed = JSON.parse(raw) as Partial<SaveData>;
-    const d = defaults();
-    return {
-      ...d,
-      ...parsed,
-      settings: { ...d.settings, ...parsed.settings },
-      best: { ...parsed.best },
-      levels: { ...parsed.levels },
-      endless: { ...parsed.endless },
-    };
+    return parseSave(localStorage.getItem(STORAGE_KEY));
   } catch {
-    return defaults();
+    // Storage blocked (some private modes): play without saving.
+    return defaultSave();
   }
 }
 
 function save(): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(data));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch {
     // Storage full or disabled (private mode) — the game still works, just without saving.
+  }
+}
+
+// Keep in sync if the game is open in two tabs: pick up the other tab's saves.
+try {
+  window.addEventListener('storage', (e) => {
+    if (e.key === STORAGE_KEY) data = parseSave(e.newValue);
+  });
+} catch {
+  // not in a browser (tests)
+}
+
+/**
+ * Ask the browser not to clear our storage under pressure (and, on iOS, not to
+ * expire it after 7 days without a visit). Installed home-screen apps are
+ * already exempt; this helps people who play in a browser tab.
+ */
+export function requestPersistentStorage(): void {
+  try {
+    void navigator.storage?.persist?.();
+  } catch {
+    // unsupported
   }
 }
 
@@ -92,13 +90,14 @@ export const store = {
     };
     save();
   },
+  /** Stars across the levels in the current campaign. */
   totalStars(): number {
-    return Object.values(data.levels).reduce((n, l) => n + l.stars, 0);
+    return LEVELS.reduce((n, l) => n + (data.levels[l.id]?.stars ?? 0), 0);
   },
 
   savedEndless(d: DifficultyId): GameState | undefined {
     const s = data.endless[d];
-    return s && s.version === 1 && s.status === 'playing' ? s : undefined;
+    return isResumableGame(s) ? s : undefined;
   },
   saveEndless(d: DifficultyId, state: GameState | undefined): void {
     if (state && state.status === 'playing') data.endless[d] = state;
@@ -107,7 +106,7 @@ export const store = {
   },
 
   resetProgress(): void {
-    data = { ...defaults(), settings: data.settings };
+    data = { ...defaultSave(), settings: data.settings };
     save();
   },
 };
