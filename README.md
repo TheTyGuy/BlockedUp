@@ -93,6 +93,16 @@ public/                  manifest, service worker, icons
 - **Seeded RNG.** Piece generation uses an RNG whose state is stored in `GameState`. Two clients with the same seed that apply the same actions deal exactly the same pieces (this is tested).
 - **No game rules in the UI.** The view asks the engine whether a placement is valid and which lines it would clear. ESLint blocks `window`, `document`, `Math.random` and `Date.now` inside `src/engine/`.
 
+## Keeping player progress safe
+
+Each player's progress (best scores, level stars, settings, an unfinished Endless run) is saved in their own browser's `localStorage` for the site's address. Deploying an update replaces the game's code and never touches that storage. To keep it that way:
+
+- **Never rename or remove a level `id`.** Stars are saved by id. Reorder, retune, rename the `name` or insert levels freely: a level a player has already beaten stays unlocked even if a new level is placed before it. `tests/progress.test.ts` fails if a shipped id disappears. Add each new id to `SHIPPED_LEVEL_IDS` there.
+- **Never change the storage key** (`STORAGE_KEY` in `src/ui/saveFormat.ts`). To change the save format, bump `SAVE_VERSION` and add a step to `MIGRATIONS` that upgrades old saves.
+- **Engine changes are safe for scores and stars.** If an update makes a saved, unfinished Endless run unusable, only that run is dropped. Saves are validated entry by entry, so one bad value never wipes the rest.
+- **Keep the same web address.** Browser storage belongs to the site's origin (`https://thetyguy.github.io`). Moving the game to a custom domain or a different GitHub account starts everyone from zero. Renaming the repo keeps the origin, but installed home-screen apps would point at the old path.
+- **iPhone note:** Safari may clear data for a _website_ that hasn't been opened for 7 days. Home-screen apps are exempt, and the game asks the browser to keep its data, so encourage testers to install it.
+
 ## Tuning difficulty
 
 Edit `src/data/difficulties.ts`. Each preset has:
@@ -137,8 +147,9 @@ Levels live in `src/data/levels.ts`. Add an object to the `LEVELS` array:
 
 Levels unlock in array order. Then:
 
-1. `npm test` validates every level: unique ids, layout dimensions, colour goals that can actually be met, and a playable start.
-2. `npm run simulate` shows how a simple greedy bot does on it. A human who plans ahead does better, so treat the bot's win rate as a relative signal.
+1. Add the new id to `SHIPPED_LEVEL_IDS` in `tests/progress.test.ts`.
+2. `npm test` validates every level: unique ids, layout dimensions, colour goals that can actually be met, and a playable start.
+3. `npm run simulate` shows how a simple greedy bot does on it. A human who plans ahead does better, so treat the bot's win rate as a relative signal.
 
 **Goal types:** `clearRows`, `clearCols`, `clearLines`, `blastColor` (+`color`), `score`, `combo` (streak length), `multiClear` (lines in one placement), `clearObstacles` (target = stones on the starting board), `survive` (pieces placed). All except `clearObstacles` take a `target`.
 

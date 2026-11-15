@@ -98,9 +98,14 @@ export const difficultyScreen = (app: App): Screen => {
   };
 };
 
-/** A level is unlocked if it's the first or the previous level has been beaten. */
+/**
+ * A level is unlocked if it's the first, the previous level has been beaten,
+ * or it has been beaten itself (so inserting or reordering levels in an update
+ * never re-locks a level a player already completed).
+ */
 export function isUnlocked(index: number): boolean {
-  return index === 0 || (store.level(LEVELS[index - 1].id)?.stars ?? 0) > 0;
+  const beaten = (i: number) => (store.level(LEVELS[i].id)?.stars ?? 0) > 0;
+  return index === 0 || beaten(index) || beaten(index - 1);
 }
 
 export const levelsScreen = (app: App): Screen => {
