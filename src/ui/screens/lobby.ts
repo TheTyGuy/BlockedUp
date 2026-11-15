@@ -123,6 +123,19 @@ export const versusMenuScreen = (app: App): Screen => {
   };
 };
 
+/** Turn a failure into something the player (or whoever set up Firebase) can act on. */
+function errorMessage(e: unknown): string {
+  if (e instanceof RoomError) return e.message;
+  const code = String((e as { code?: unknown } | null)?.code ?? '');
+  if (code === 'auth/operation-not-allowed' || code === 'auth/admin-restricted-operation') {
+    return "Online play isn't switched on yet: anonymous sign-in is disabled in Firebase.";
+  }
+  if (code.startsWith('auth/') && code !== 'auth/network-request-failed') {
+    return `Couldn't sign in to the game server (${code}).`;
+  }
+  return "Couldn't connect. Check your connection and try again.";
+}
+
 const withTimeout = <T>(p: Promise<T>, ms: number): Promise<T> =>
   Promise.race([
     p,
@@ -253,11 +266,7 @@ export function onlineRoomScreen(app: App, mode: { create: true } | { join: stri
       else showWaiting(m);
     } catch (e) {
       if (gone) return;
-      showError(
-        e instanceof RoomError
-          ? e.message
-          : "Couldn't connect. Check your connection and try again.",
-      );
+      showError(errorMessage(e));
     }
   })();
 

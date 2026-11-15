@@ -90,6 +90,14 @@ describe('creating and joining', () => {
     expect(err.reason).toBe('version');
   });
 
+  it('says so when the server rules refuse everything (rules not published)', async () => {
+    const server = new MemoryServer();
+    server.rule = () => false;
+    await expect(OnlineMatch.create(server.client('a'), 1)).rejects.toMatchObject({
+      reason: 'denied',
+    });
+  });
+
   it('picks another code when the first is taken', async () => {
     const server = withRules(new MemoryServer());
     const a = await OnlineMatch.create(server.client('a'), 1);
