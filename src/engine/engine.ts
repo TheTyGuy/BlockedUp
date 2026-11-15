@@ -221,9 +221,12 @@ function applyGarbage(
     return invalid(state, 'Bad garbage amount');
   }
   const rng = new Rng(state.rng);
-  const dropped = dropJunk(state.board, action.cells, rng);
+  const smashChance = state.config.versus?.smashChance ?? 0;
+  const dropped = dropJunk(state.board, action.cells, rng, smashChance);
   let next: GameState = { ...state, board: dropped.board, rng: rng.state };
-  const events: GameEvent[] = [{ type: 'garbageReceived', cells: dropped.cells }];
+  const events: GameEvent[] = [
+    { type: 'garbageReceived', cells: dropped.cells, smashed: dropped.smashed },
+  ];
   if (!handFits(next).some(Boolean)) {
     next = { ...next, status: 'lost', endReason: 'noFit' };
     events.push({ type: 'gameOver', reason: 'noFit' });

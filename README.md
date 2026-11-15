@@ -184,7 +184,7 @@ If a goal needs information that no event carries yet, emit a new event from `en
 
 In place so far (nothing player-visible yet):
 
-- **Engine: Garbage Attack rules.** With `config.versus` set, multi-clears and combos emit a `garbageSent` event. The opponent applies a `receiveGarbage` action, which drops stone blocks into random empty cells using the seeded RNG. Junk never completes a line by itself. Tune the amounts in `src/data/versus.ts`. `tests/versus.test.ts` includes the key sync test: replaying a player's action log from the shared seed reproduces their exact board.
+- **Engine: Garbage Attack rules.** With `config.versus` set, multi-clears and combos emit a `garbageSent` event. The opponent applies a `receiveGarbage` action. Using the seeded RNG, each piece of junk either lands as a stone in a random empty cell or (with probability `smashChance`) smashes one of the receiver's coloured blocks and removes it. Junk never completes a line by itself and never smashes stones. Tune the amounts in `src/data/versus.ts`. `tests/versus.test.ts` includes the key sync test: replaying a player's action log from the shared seed reproduces their exact board.
 - **Firebase project `blockedup`:** Realtime Database + anonymous sign-in. The web config is in `src/net/firebaseConfig.ts` (public identifiers, safe to commit).
 - **Security rules** in `database.rules.json`: only a room's two players can read it; each player can only append to their own move list and add to the opponent's inbox; moves can't be rewritten. Publish them by pasting the file into **Firebase console → Realtime Database → Rules**, or with `npx firebase-tools deploy --only database`.
 

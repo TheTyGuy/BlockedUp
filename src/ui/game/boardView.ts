@@ -472,18 +472,40 @@ export class BoardView {
           );
           break;
         case 'garbageReceived':
-          // Junk from the opponent thuds onto the board.
-          if (e.cells.length === 0) break;
+          // Junk from the opponent: stones thud into empty cells, and/or
+          // existing blocks get smashed off the board.
+          if (e.cells.length + e.smashed.length === 0) break;
           for (const p of e.cells) this.placed.set(p.row * state.board.width + p.col, now);
-          this.shake = { start: now, dur: 300, mag: Math.min(3 + e.cells.length, 10) };
-          this.addText(
-            `+${e.cells.length} junk!`,
-            this.L.w / 2,
-            boardY + this.L.boardH * 0.5,
-            30,
-            '#c9cfdb',
-            1100,
-          );
+          e.smashed.forEach((c, i) => {
+            const color = colorOf(c.cell.color);
+            this.pops.push({ row: c.row, col: c.col, color, start: now + i * 70 });
+            this.spawnParticles(c.row, c.col, color, now + i * 70, 3);
+          });
+          this.shake = {
+            start: now,
+            dur: 300,
+            mag: Math.min(3 + e.cells.length + e.smashed.length, 10),
+          };
+          if (e.cells.length > 0) {
+            this.addText(
+              `+${e.cells.length} junk!`,
+              this.L.w / 2,
+              boardY + this.L.boardH * 0.42,
+              30,
+              '#c9cfdb',
+              1100,
+            );
+          }
+          if (e.smashed.length > 0) {
+            this.addText(
+              `${e.smashed.length} smashed!`,
+              this.L.w / 2,
+              boardY + this.L.boardH * 0.58,
+              30,
+              '#ff8a96',
+              1100,
+            );
+          }
           sfx.garbage();
           haptics.clear(2);
           break;

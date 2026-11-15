@@ -132,6 +132,11 @@ export interface VersusConfig {
   comboBonus: number;
   /** Cap on junk cells from a single placement. */
   maxPerAttack: number;
+  /**
+   * Chance (0..1) that each piece of incoming junk SMASHES one of the
+   * receiver's coloured blocks (removing it) instead of landing as a stone.
+   */
+  smashChance: number;
 }
 
 export interface GameConfig {
@@ -246,8 +251,11 @@ export type GameEvent =
   | { type: 'gameOver'; reason: EndReason }
   /** Versus: this placement attacks the opponent with `cells` junk blocks. */
   | { type: 'garbageSent'; cells: number }
-  /** Versus: junk blocks (stone) that landed on this board. */
-  | { type: 'garbageReceived'; cells: Point[] };
+  /**
+   * Versus: junk hit this board. `cells` = stones that landed in empty spots;
+   * `smashed` = existing blocks that were broken off and removed.
+   */
+  | { type: 'garbageReceived'; cells: Point[]; smashed: ClearedCell[] };
 
 export interface ApplyResult {
   state: GameState;

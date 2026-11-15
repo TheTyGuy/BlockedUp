@@ -13,6 +13,9 @@ import { makeState } from './helpers';
 
 const EMPTY8 = Array(8).fill('........');
 const versus = { versus: GARBAGE_ATTACK };
+const landOnly = { versus: { ...GARBAGE_ATTACK, smashChance: 0 } };
+const smashOnly = { versus: { ...GARBAGE_ATTACK, smashChance: 1 } };
+const blocks = (s: GameState) => s.board.cells.filter((c) => c?.kind === 'block').length;
 const stones = (s: GameState) => s.board.cells.filter((c) => c?.kind === 'obstacle').length;
 
 describe('garbage amounts', () => {
@@ -76,12 +79,12 @@ describe('receiving garbage', () => {
     const s = makeState({
       board: ['rrrrrrr.', ...EMPTY8.slice(1)],
       hand: ['dot-0', 'dot-0', 'dot-0'],
-      config: versus,
+      config: landOnly,
     });
-    const { state } = apply(s, { type: 'receiveGarbage', cells: 64 });
+    const { state } = apply(s, { type: 'receiveGarbage', cells: 30 });
     expect(findFullLines(state.board)).toEqual({ rows: [], cols: [] });
     expect(state.board.cells[7]).toBeNull(); // the one gap in row 0 was left alone
-    expect(stones(state)).toBeLessThan(57);
+    expect(stones(state)).toBe(30);
   });
 
   it('ends the game if nothing in hand fits afterwards', () => {
@@ -108,6 +111,59 @@ describe('receiving garbage', () => {
     });
     const { state } = apply(s, { type: 'place', handIndex: 0, row: 0, col: 7 });
     expect(stones(state)).toBe(0);
+  });
+});
+
+describe('smashing junk', () => {
+  const board = ['rrrr....', 'gg......', ...EMPTY8.slice(2, 7), '#.......'];
+
+  it('breaks off coloured blocks instead of adding stones', () => {
+    const s = makeState({ board, hand: ['dot-0', 'dot-0', 'dot-0'], config: smashOnly });
+    const { state, events } = apply(s, { type: 'receiveGarbage', cells: 3 });
+    expect(blocks(state)).toBe(blocks(s) - 3);
+    expect(stones(state)).toBe(1); // the existing stone is untouched, none added
+    const e = events[0];
+    if (e.type !== 'garbageReceived') throw new Error('expected garbageReceived');
+    expect(e.cells).toHaveLength(0);
+    expect(e.smashed).toHaveLength(3);
+    for (const c of e.smashed) {
+      expect(c.cell.kind).toBe('block');
+      expect(state.board.cells[c.row * 8 + c.col]).toBeNull();
+    }
+  });
+
+  it('never smashes stones, and lands as stone when nothing can be smashed', () => {
+    const s = makeState({
+      board: ['#.......', ...EMPTY8.slice(1)],
+      hand: ['dot-0', 'dot-0', 'dot-0'],
+      config: smashOnly,
+    });
+    const { state } = apply(s, { type: 'receiveGarbage', cells: 2 });
+    expect(stones(state)).toBe(3);
+  });
+
+  it('smashes when there is nowhere left to land', () => {
+    // Every row and column has exactly one gap, so no stone may land.
+    const full = Array.from({ length: 8 }, (_, r) =>
+      Array.from({ length: 8 }, (_, c) => (c === r ? '.' : 'r')).join(''),
+    );
+    const s = makeState({ board: full, hand: ['dot-0', 'dot-0', 'dot-0'], config: landOnly });
+    const { state, events } = apply(s, { type: 'receiveGarbage', cells: 1 });
+    expect(events[0]).toMatchObject({ type: 'garbageReceived', cells: [] });
+    expect(blocks(state)).toBe(blocks(s) - 1);
+  });
+
+  it('a mixed attack does both, deterministically, and never completes a line', () => {
+    const busy = Array.from({ length: 8 }, (_, r) => (r % 2 ? 'rrrr....' : '....gggg'));
+    const s = makeState({ board: busy, hand: ['dot-0', 'dot-0', 'dot-0'], config: versus });
+    const a = apply(s, { type: 'receiveGarbage', cells: 10 });
+    expect(a).toEqual(apply(s, { type: 'receiveGarbage', cells: 10 }));
+    const e = a.events[0];
+    if (e.type !== 'garbageReceived') throw new Error('expected garbageReceived');
+    expect(e.cells.length + e.smashed.length).toBe(10);
+    expect(e.cells.length).toBeGreaterThan(0);
+    expect(e.smashed.length).toBeGreaterThan(0);
+    expect(findFullLines(a.state.board)).toEqual({ rows: [], cols: [] });
   });
 });
 
