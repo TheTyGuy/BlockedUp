@@ -142,15 +142,28 @@ function toggle(label: string, value: boolean, onChange: (v: boolean) => void): 
 
 export const settingsScreen = (app: App): Screen => {
   const s = store.settings;
+  // Two-tap confirmation built into the page (native confirm() dialogs are
+  // blocked in some embedded/webview contexts and feel clunky on mobile).
+  let armed = false;
+  let disarmTimer = 0;
   const reset = h(
     'button',
     {
       class: 'btn btn-danger',
       onclick: () => {
-        if (confirm('Reset all best scores, mission stars and saved games?')) {
-          store.resetProgress();
-          reset.textContent = 'Progress reset ✓';
+        if (!armed) {
+          armed = true;
+          reset.textContent = 'Tap again to erase all progress';
+          disarmTimer = window.setTimeout(() => {
+            armed = false;
+            reset.textContent = 'Reset progress';
+          }, 4000);
+          return;
         }
+        clearTimeout(disarmTimer);
+        armed = false;
+        store.resetProgress();
+        reset.textContent = 'Progress reset ✓';
       },
     },
     'Reset progress',
