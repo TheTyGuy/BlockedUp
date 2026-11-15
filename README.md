@@ -9,6 +9,8 @@ A bright, chunky, mobile-first block puzzle game. Drag pieces from your hand ont
 - Installable PWA with offline play
 - Pure, deterministic, fully unit-tested game engine
 
+**Play it:** https://thetyguy.github.io/BlockedUp/. On a phone, use "Add to Home Screen" (iOS Safari) or "Install app" (Android Chrome) to install it.
+
 ## Getting started
 
 ```bash
@@ -25,6 +27,10 @@ npm run dev        # dev server (also on your LAN: open the printed URL on your 
 | `npm run lint`               | ESLint                                                            |
 | `npm run format`             | Prettier (`format:check` for CI)                                  |
 | `npm run simulate [-- runs]` | A greedy bot plays every level and prints win rates and stars     |
+
+## Deploying
+
+Every push to `main` runs `.github/workflows/deploy.yml`: lint, test, build, then publish `dist/` to GitHub Pages. Installed copies of the app pick up the new version the next time they're opened online. To redeploy without a code change, use **Actions → Deploy to GitHub Pages → Run workflow**.
 
 The build uses relative paths (`base: './'`), so `dist/` can be hosted from any static host or sub-path (GitHub Pages, Netlify, etc.). The service worker only registers in production builds, so `npm run dev` never serves stale cached files.
 
