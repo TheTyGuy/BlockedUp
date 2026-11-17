@@ -50,8 +50,8 @@ Ask the owner how many levels each world should have. World 2 was first proposed
 - The repo and site are **public**. Only add photos the owner has approved for public use.
 - **No names** of the dogs (or people) in the game, code, file names or commit messages. Photos get playful titles instead.
 - **No people's faces.** Crop tight around the dog's face, square, 640px JPEG, re-saved so location data is dropped.
-- **Held back:** four black-and-white studio portraits. They look like a professional photographer's work; add them only if the owner confirms they may be posted publicly.
-- **Balance:** one dog appears in about half of World 2's photos. The owner was asked for more face shots of the other three; swap some repeats when they arrive.
+- **Studio portraits:** four black-and-white studio portraits, one per small dog. The owner has confirmed they may be posted publicly and asked for them to be used. They are in `assets/photo-spares/studio-*.jpg`; use them for the first photo levels of World 3. These crops come from screenshots (about 512px, upscaled); ask the owner for the original files if sharper versions are wanted.
+- **Balance:** one dog appears in about half of World 2's photos. The studio portraits help; the owner was also asked for more face shots of the other dogs. Do not swap photos on World 2 levels that are already live: a player's album is tied to the level they won.
 - **Spare approved crops** not yet used are in `assets/photo-spares/` (not deployed). Other photos must be re-sent by the owner in the new conversation; uploads do not carry over.
 
 ## Two-player status
