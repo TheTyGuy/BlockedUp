@@ -13,6 +13,12 @@
  *   goals     ALL must be completed to win (see GoalSpec in engine/types.ts)
  *   moveLimit optional max number of pieces placed
  *   stars     two / three star criteria; each is "maxMoves OR minScore"
+ *   world     which world the level belongs to (see WORLDS below; default 1)
+ *   cover     cover tiles hiding a photo. Either one number for every cell, or
+ *             one string of digits per row ('.' or '0' = uncovered). The digit
+ *             is how many line clears it takes to break through that cell.
+ *             Use with the goal { type: 'reveal' }.
+ *   photo     id from photos.ts shown under the cover and added to the album
  *
  * Difficulty was sanity-checked with `npm run simulate` (a greedy bot).
  */
@@ -30,7 +36,22 @@ export interface LevelDef {
   goals: GoalSpec[];
   moveLimit?: number;
   stars: { two: StarCriterion; three: StarCriterion };
+  world?: number;
+  cover?: number | string[];
+  photo?: string;
 }
+
+export interface WorldDef {
+  id: number;
+  name: string;
+  blurb: string;
+}
+
+/** Worlds group levels in the level list. Levels unlock in LEVELS order. */
+export const WORLDS: WorldDef[] = [
+  { id: 1, name: 'Block Basics', blurb: 'Learn the ropes' },
+  { id: 2, name: 'Photo Album', blurb: 'Break through the tiles to uncover each photo' },
+];
 
 const C3: ColorId[] = ['red', 'blue', 'yellow'];
 const C4: ColorId[] = ['red', 'blue', 'yellow', 'green'];
@@ -312,6 +333,172 @@ export const LEVELS: LevelDef[] = [
     moveLimit: 70,
     stars: { two: { maxMoves: 55 }, three: { maxMoves: 45 } },
   },
+
+  // ---------------------------------------------------------------- World 2
+  // Photo Album: every level hides a photo under cover tiles.
+  {
+    id: 'l21',
+    world: 2,
+    name: 'Peekaboo',
+    hint: 'Clear a line across the tiles to break them and see who is hiding.',
+    size: 8,
+    colors: C4,
+    pieces: 'easy',
+    photo: 'plaid-hood',
+    cover: [
+      '........',
+      '........',
+      '..1111..',
+      '..1111..',
+      '..1111..',
+      '..1111..',
+      '........',
+      '........',
+    ],
+    goals: [{ type: 'reveal' }],
+    stars: { two: { maxMoves: 16 }, three: { maxMoves: 11 } },
+  },
+  {
+    id: 'l22',
+    world: 2,
+    name: 'Blanket Burrito',
+    hint: 'Every tile needs a line cleared across it.',
+    size: 8,
+    colors: C4,
+    pieces: 'easy',
+    photo: 'blanket-burrito',
+    cover: 1,
+    goals: [{ type: 'reveal' }],
+    stars: { two: { maxMoves: 27 }, three: { maxMoves: 20 } },
+  },
+  {
+    id: 'l23',
+    world: 2,
+    name: 'Walkies',
+    size: 7,
+    colors: C4,
+    pieces: 'easy',
+    photo: 'walk-tongue',
+    cover: 1,
+    goals: [{ type: 'reveal' }],
+    moveLimit: 45,
+    stars: { two: { maxMoves: 24 }, three: { maxMoves: 18 } },
+  },
+  {
+    id: 'l24',
+    world: 2,
+    name: 'Little Red',
+    hint: 'Thick tiles crack first. Clear across them again to break through.',
+    size: 8,
+    colors: C5,
+    pieces: 'easy',
+    photo: 'red-blanket',
+    cover: [
+      '11111111',
+      '11111111',
+      '11222211',
+      '11222211',
+      '11222211',
+      '11222211',
+      '11111111',
+      '11111111',
+    ],
+    goals: [{ type: 'reveal' }],
+    stars: { two: { maxMoves: 44 }, three: { maxMoves: 33 } },
+  },
+  {
+    id: 'l25',
+    world: 2,
+    name: 'Mlem',
+    size: 6,
+    colors: C4,
+    pieces: 'easy',
+    photo: 'lick',
+    cover: 2,
+    goals: [{ type: 'reveal' }],
+    moveLimit: 55,
+    stars: { two: { maxMoves: 35 }, three: { maxMoves: 26 } },
+  },
+  {
+    id: 'l26',
+    world: 2,
+    name: 'Cheese!',
+    hint: 'A big board. Work across it row by row.',
+    size: 9,
+    colors: C5,
+    pieces: 'normal',
+    photo: 'happy-grin',
+    cover: 1,
+    goals: [{ type: 'reveal' }],
+    moveLimit: 60,
+    stars: { two: { maxMoves: 36 }, three: { maxMoves: 28 } },
+  },
+  {
+    id: 'l27',
+    world: 2,
+    name: 'Sun Worshipper',
+    size: 8,
+    colors: C5,
+    pieces: 'easy',
+    photo: 'sun-squint',
+    cover: 2,
+    goals: [{ type: 'reveal' }],
+    moveLimit: 90,
+    stars: { two: { maxMoves: 58 }, three: { maxMoves: 45 } },
+  },
+  {
+    id: 'l28',
+    world: 2,
+    name: 'Sweet Dreams',
+    hint: 'Stones are in the way. Clear their lines to move them.',
+    size: 7,
+    colors: C5,
+    pieces: 'easy',
+    photo: 'nap',
+    cover: 2,
+    layout: ['.......', '.#...#.', '.......', '.......', '.......', '.#...#.', '.......'],
+    goals: [{ type: 'reveal' }],
+    moveLimit: 75,
+    stars: { two: { maxMoves: 46 }, three: { maxMoves: 36 } },
+  },
+  {
+    id: 'l29',
+    world: 2,
+    name: 'Blep',
+    size: 10,
+    colors: C6,
+    pieces: 'normal',
+    photo: 'tongue-portrait',
+    cover: [
+      '1111111111',
+      '1222222221',
+      '1211111121',
+      '1212222121',
+      '1212112121',
+      '1212112121',
+      '1212222121',
+      '1211111121',
+      '1222222221',
+      '1111111111',
+    ],
+    goals: [{ type: 'reveal' }],
+    moveLimit: 110,
+    stars: { two: { maxMoves: 74 }, three: { maxMoves: 58 } },
+  },
+  {
+    id: 'l30',
+    world: 2,
+    name: 'Let Us In',
+    hint: 'The whole gang is behind this one.',
+    size: 8,
+    colors: C6,
+    pieces: 'normal',
+    photo: 'screen-door',
+    cover: 2,
+    goals: [{ type: 'reveal' }, { type: 'combo', target: 3 }],
+    moveLimit: 95,
+    stars: { two: { maxMoves: 62 }, three: { maxMoves: 50 } },
+  },
 ];
 
 const LETTER_COLORS: Record<string, ColorId> = {
@@ -348,6 +535,23 @@ export function parseLayout(level: LevelDef): GameConfig['initialCells'] {
   return cells;
 }
 
+/** Turn a level's `cover` into the engine's per-cell layer counts. Throws on malformed data. */
+export function parseCover(level: LevelDef): number[] | undefined {
+  const { cover, size } = level;
+  if (cover === undefined) return undefined;
+  if (typeof cover === 'number') return new Array<number>(size * size).fill(cover);
+  if (cover.length !== size) throw new Error(`Level ${level.id}: cover has ${cover.length} rows`);
+  return cover.flatMap((line, row) => {
+    if (line.length !== size)
+      throw new Error(`Level ${level.id}: cover row ${row} has wrong length`);
+    return [...line].map((ch) => {
+      if (ch === '.') return 0;
+      if (ch < '0' || ch > '9') throw new Error(`Level ${level.id}: bad cover char '${ch}'`);
+      return Number(ch);
+    });
+  });
+}
+
 /** Build the engine config for a level. */
 export function levelConfig(level: LevelDef): GameConfig {
   const preset = DIFFICULTIES[level.pieces];
@@ -358,6 +562,7 @@ export function levelConfig(level: LevelDef): GameConfig {
     generator: preset.generator,
     scoring: preset.scoring,
     initialCells: parseLayout(level),
+    cover: parseCover(level),
     mission: { goals: level.goals, moveLimit: level.moveLimit, stars: level.stars },
   };
 }

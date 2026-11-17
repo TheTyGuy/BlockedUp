@@ -9,6 +9,7 @@ import {
 } from '../../engine';
 import { DIFFICULTIES, endlessConfig, type DifficultyId } from '../../data/difficulties';
 import { LEVELS, levelConfig, levelIndex } from '../../data/levels';
+import { photoUrl } from '../../data/photos';
 import type { App, Screen } from '../app';
 import { h } from '../dom';
 import { sfx } from '../fx/audio';
@@ -161,7 +162,9 @@ export function gameScreen(app: App, session: GameSession): Screen {
   let view: BoardView | null = null;
   let endTimer = 0;
   const raf = requestAnimationFrame(() => {
-    view = new BoardView(stage, session);
+    view = new BoardView(stage, session, {
+      photoUrl: level?.photo ? photoUrl(level.photo) : undefined,
+    });
     if (new URLSearchParams(location.search).has('debug')) Object.assign(window, { __view: view });
     if (level) showIntro();
   });
@@ -196,7 +199,8 @@ export function gameScreen(app: App, session: GameSession): Screen {
       }
       endTimer = window.setTimeout(
         () => app.show((a) => resultsScreen(a, session, newBest)),
-        won ? 1700 : 1500,
+        // Photo levels linger so the uncovered picture can be enjoyed.
+        won ? (level?.photo ? 3000 : 1700) : 1500,
       );
     }
   };

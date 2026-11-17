@@ -22,6 +22,8 @@ export function goalLabel(spec: GoalSpec, target: number): string {
       return `Break all ${target} stones`;
     case 'survive':
       return `Place ${target} pieces`;
+    case 'reveal':
+      return 'Uncover the photo';
   }
 }
 
@@ -46,5 +48,7 @@ export function goalIcon(spec: GoalSpec): string {
       return '🪨';
     case 'survive':
       return '⏳';
+    case 'reveal':
+      return '🖼️';
   }
 }

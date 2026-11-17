@@ -33,8 +33,23 @@ export function bestMove(s: GameState): Action | null {
         const p = previewPlacement(s, h, r, c);
         if (!p.valid) continue;
         const action: Action = { type: 'place', handIndex: h, row: r, col: c };
-        const next = apply(s, action).state;
+        const result = apply(s, action);
+        const next = result.state;
         let score = (p.rows.length + p.cols.length) * 40 + boardQuality(next.board);
+        // On photo levels, prefer clears that break cover tiles.
+        for (const e of result.events) {
+          if (e.type === 'coverDamaged') score += e.cells.length * 25;
+        }
+        // ...and building in rows / columns that still have tiles to break.
+        if (s.cover) {
+          const w = s.board.width;
+          for (const c of p.cells) {
+            let need = 0;
+            for (let i = 0; i < w; i++) need += s.cover[c.row * w + i] > 0 ? 1 : 0;
+            for (let i = 0; i < s.board.height; i++) need += s.cover[i * w + c.col] > 0 ? 1 : 0;
+            score += need * 0.6;
+          }
+        }
         if (next.status === 'won') score += 1e6;
         if (next.status === 'lost') score -= 1e5;
         if (score > bestScore) {

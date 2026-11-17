@@ -106,7 +106,9 @@ export type GoalSpec =
   | { type: 'combo'; target: number }
   | { type: 'multiClear'; target: number }
   | { type: 'clearObstacles' }
-  | { type: 'survive'; target: number };
+  | { type: 'survive'; target: number }
+  /** Break through every cover tile (target = covered cells at the start). */
+  | { type: 'reveal' };
 
 export type GoalType = GoalSpec['type'];
 
@@ -148,6 +150,12 @@ export interface GameConfig {
   scoring: ScoringConfig;
   /** Pre-filled cells at game start (obstacles or coloured blocks). */
   initialCells?: { row: number; col: number; cell: Cell }[];
+  /**
+   * Cover tiles over the board floor (row-major, one number per cell): how
+   * many line clears it takes to break through that cell. 0 = no cover.
+   * Covers sit UNDER blocks; they never stop a piece being placed.
+   */
+  cover?: number[];
   mission?: MissionConfig;
   versus?: VersusConfig;
 }
@@ -200,6 +208,8 @@ export interface GameState {
   status: GameStatus;
   endReason: EndReason | null;
   mission: MissionState | null;
+  /** Remaining cover layers per cell (row-major). Absent when the game has no covers. */
+  cover?: number[];
 }
 
 // ---------------------------------------------------------------------------
@@ -243,6 +253,11 @@ export type GameEvent =
       combo: number;
     }
   | { type: 'boardCleared'; points: number }
+  /**
+   * Cover tiles hit by a line clear. `layers` is what's left on that cell:
+   * above 0 it cracked, at 0 it broke through.
+   */
+  | { type: 'coverDamaged'; cells: { row: number; col: number; layers: number }[] }
   | { type: 'comboChanged'; combo: number; previous: number }
   | { type: 'scoreChanged'; score: number; delta: number }
   | { type: 'handDealt'; hand: HandPiece[] }
