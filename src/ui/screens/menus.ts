@@ -36,6 +36,7 @@ function topBar(title: string, onBack: () => void): HTMLElement {
 
 export const homeScreen = (app: App): Screen => {
   const stars = store.totalStars();
+  const photosWon = unlockedPhotoIds().size;
   return {
     el: h(
       'div',
@@ -61,12 +62,15 @@ export const homeScreen = (app: App): Screen => {
           '2 Players',
           h('small', {}, 'Garbage Attack · online or same device'),
         ),
-        h(
-          'button',
-          { class: 'btn btn-ghost', onclick: () => app.show(albumScreen) },
-          'Album',
-          h('small', {}, `${unlockedPhotoIds().size} of ${PHOTOS.length} photos`),
-        ),
+        // The album stays hidden until the first photo is won, so it's a surprise.
+        photosWon > 0
+          ? h(
+              'button',
+              { class: 'btn btn-ghost', onclick: () => app.show(albumScreen) },
+              'Album',
+              h('small', {}, `${photosWon} of ${PHOTOS.length} photos`),
+            )
+          : null,
         h(
           'button',
           { class: 'btn btn-ghost', onclick: () => app.show(settingsScreen) },

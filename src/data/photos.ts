@@ -23,6 +23,16 @@ export const PHOTOS: PhotoDef[] = [
   { id: 'nap', title: 'Sweet Dreams' },
   { id: 'tongue-portrait', title: 'Blep' },
   { id: 'screen-door', title: 'Let Us In' },
+  { id: 'pink-portrait', title: 'Pretty in Pink' },
+  { id: 'big-smile', title: 'Big Smile' },
+  { id: 'looking-down', title: 'Deep Thoughts' },
+  { id: 'sunbather', title: 'Sunbather' },
+  { id: 'milk-moustache', title: 'Milk Moustache' },
+  { id: 'tongue-out', title: 'Tongue Out' },
+  { id: 'kisses', title: 'Kisses' },
+  { id: 'pup-cup', title: 'Pup Cup' },
+  { id: 'snack-time', title: 'Snack Time' },
+  { id: 'porch-trio', title: 'Porch Party' },
 ];
 
 export const photoUrl = (id: string): string => `./photos/${id}.jpg`;

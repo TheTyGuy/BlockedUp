@@ -795,7 +795,7 @@ export class BoardView {
 
         // A tile only looks cracked once it has actually been hit.
         if (layers > 0) {
-          this.drawCoverTile(x, y, layers < (startCover?.[i] ?? layers), layers >= 2, i);
+          this.drawCoverTile(x, y, (startCover?.[i] ?? layers) - layers, layers, i);
         }
 
         const hit = this.coverHits.get(i);
@@ -812,13 +812,8 @@ export class BoardView {
   }
 
   /** A cover slab. Always opaque, so nothing underneath shows until it breaks. */
-  private drawCoverTile(
-    x: number,
-    y: number,
-    cracked: boolean,
-    thick: boolean,
-    index: number,
-  ): void {
+  private drawCoverTile(x: number, y: number, hits: number, layers: number, index: number): void {
+    const cracked = hits > 0;
     const { ctx, L } = this;
     const s = L.cell;
     const g = Math.max(0.5, s * 0.03);
@@ -832,11 +827,12 @@ export class BoardView {
       ctx.fillStyle = 'rgba(255,255,255,0.14)';
       roundRect(ctx, x + s * 0.16, y + s * 0.12, s * 0.34, s * 0.09, s * 0.045);
       ctx.fill();
-      if (thick) {
-        // Thick tiles (2+ clears to break) get an inner frame so they can be planned around.
-        ctx.strokeStyle = 'rgba(28,20,80,0.55)';
-        ctx.lineWidth = Math.max(1, s * 0.05);
-        roundRect(ctx, x + s * 0.2, y + s * 0.2, s * 0.6, s * 0.53, s * 0.1);
+      // Thick tiles get one inner frame per extra clear they need, so they can be planned around.
+      ctx.strokeStyle = 'rgba(28,20,80,0.55)';
+      ctx.lineWidth = Math.max(1, s * 0.05);
+      for (let f = 0; f < Math.min(layers - 1, 2); f++) {
+        const inset = s * (0.2 + f * 0.12);
+        roundRect(ctx, x + inset, y + inset, s - 2 * inset, s * 0.93 - 2 * inset, s * 0.1);
         ctx.stroke();
       }
       return;
@@ -850,8 +846,10 @@ export class BoardView {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
-    for (let a = 0; a < 4; a++) {
-      const ang = (a / 4) * Math.PI * 2 + k(3 + a) * 1.2;
+    // More cracks the closer the tile is to breaking.
+    const lines = layers === 1 ? 5 : 3;
+    for (let a = 0; a < lines; a++) {
+      const ang = (a / lines) * Math.PI * 2 + k(3 + a) * 1.2;
       const len = s * (0.3 + 0.16 * k(7 + a));
       const mx = cx + Math.cos(ang) * len * 0.5 + (k(11 + a) - 0.5) * s * 0.12;
       const my = cy + Math.sin(ang) * len * 0.5 + (k(15 + a) - 0.5) * s * 0.12;
