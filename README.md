@@ -168,7 +168,7 @@ A photo level hides a picture under **cover tiles**. Clearing a line hits the ti
   pieces: 'easy',
   photo: 'zoomies',            // id from src/data/photos.ts
   cover: 2,                    // every cell needs 2 clears...
-  // cover: ['11111111', '11222211', ...],  // ...or set layers per cell ('.' = uncovered)
+  // cover: ['11111111', '11222211', ...],  // ...or set layers per cell (cover every cell)
   goals: [{ type: 'reveal' }],
   moveLimit: 90,
   stars: { two: { maxMoves: 60 }, three: { maxMoves: 48 } },

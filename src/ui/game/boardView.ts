@@ -768,6 +768,7 @@ export class BoardView {
     ctx.stroke();
     const g = Math.max(1, L.cell * 0.05);
     const cover = state.cover;
+    const startCover = state.config.cover;
     const photo = this.photo;
     const now = performance.now();
     for (let r = 0; r < state.board.height; r++) {
@@ -778,23 +779,24 @@ export class BoardView {
         const layers = cover?.[i] ?? 0;
         const showPhoto = photo !== null && cover !== undefined;
 
-        if (showPhoto && layers <= 1) {
-          // This cell's slice of the photo (fully visible, or peeking through a cracked tile).
+        if (showPhoto && layers === 0) {
+          // This cell's slice of the photo, visible once its tile has broken.
           const sw = photo.naturalWidth / state.board.width;
           const sh = photo.naturalHeight / state.board.height;
           ctx.drawImage(photo, c * sw, r * sh, sw, sh, x + 0.5, y + 0.5, L.cell - 1, L.cell - 1);
-          if (layers === 0) {
-            // Slightly dimmed while playing so blocks stand out; full brightness on the win.
-            ctx.fillStyle = 'rgba(12,8,40,0.24)';
-            ctx.fillRect(x + 0.5, y + 0.5, L.cell - 1, L.cell - 1);
-          }
+          // Slightly dimmed while playing so blocks stand out; full brightness on the win.
+          ctx.fillStyle = 'rgba(12,8,40,0.24)';
+          ctx.fillRect(x + 0.5, y + 0.5, L.cell - 1, L.cell - 1);
         } else if (!cover || layers === 0) {
           ctx.fillStyle = 'rgba(255,255,255,0.055)';
           roundRect(ctx, x + g, y + g, L.cell - 2 * g, L.cell - 2 * g, L.cell * 0.16);
           ctx.fill();
         }
 
-        if (layers > 0) this.drawCoverTile(x, y, layers, i);
+        // A tile only looks cracked once it has actually been hit.
+        if (layers > 0) {
+          this.drawCoverTile(x, y, layers < (startCover?.[i] ?? layers), layers >= 2, i);
+        }
 
         const hit = this.coverHits.get(i);
         if (hit !== undefined) {
@@ -809,24 +811,34 @@ export class BoardView {
     }
   }
 
-  /** A cover slab. 2+ layers: solid. 1 layer: cracked, with the photo showing faintly through. */
-  private drawCoverTile(x: number, y: number, layers: number, index: number): void {
+  /** A cover slab. Always opaque, so nothing underneath shows until it breaks. */
+  private drawCoverTile(
+    x: number,
+    y: number,
+    cracked: boolean,
+    thick: boolean,
+    index: number,
+  ): void {
     const { ctx, L } = this;
     const s = L.cell;
     const g = Math.max(0.5, s * 0.03);
-    const cracked = layers === 1;
-    ctx.globalAlpha = cracked ? 0.8 : 1;
     ctx.fillStyle = COVER_COLOR.dark;
     roundRect(ctx, x + g, y + g, s - 2 * g, s - 2 * g, s * 0.14);
     ctx.fill();
     ctx.fillStyle = cracked ? COVER_COLOR.base : COVER_COLOR.light;
     roundRect(ctx, x + g, y + g, s - 2 * g, s - 2 * g - s * 0.07, s * 0.14);
     ctx.fill();
-    ctx.globalAlpha = 1;
     if (!cracked) {
       ctx.fillStyle = 'rgba(255,255,255,0.14)';
       roundRect(ctx, x + s * 0.16, y + s * 0.12, s * 0.34, s * 0.09, s * 0.045);
       ctx.fill();
+      if (thick) {
+        // Thick tiles (2+ clears to break) get an inner frame so they can be planned around.
+        ctx.strokeStyle = 'rgba(28,20,80,0.55)';
+        ctx.lineWidth = Math.max(1, s * 0.05);
+        roundRect(ctx, x + s * 0.2, y + s * 0.2, s * 0.6, s * 0.53, s * 0.1);
+        ctx.stroke();
+      }
       return;
     }
     // Crack lines, varied per cell but stable from frame to frame.

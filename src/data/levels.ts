@@ -15,8 +15,9 @@
  *   stars     two / three star criteria; each is "maxMoves OR minScore"
  *   world     which world the level belongs to (see WORLDS below; default 1)
  *   cover     cover tiles hiding a photo. Either one number for every cell, or
- *             one string of digits per row ('.' or '0' = uncovered). The digit
- *             is how many line clears it takes to break through that cell.
+ *             one string of digits per row. The digit is how many line clears
+ *             it takes to break through that cell. Photo levels must cover
+ *             EVERY cell, so the picture stays a surprise.
  *             Use with the goal { type: 'reveal' }.
  *   photo     id from photos.ts shown under the cover and added to the album
  *
@@ -340,23 +341,14 @@ export const LEVELS: LevelDef[] = [
     id: 'l21',
     world: 2,
     name: 'Peekaboo',
-    hint: 'Clear a line across the tiles to break them and see who is hiding.',
-    size: 8,
+    hint: 'Clear a line across the tiles to break them. What is hiding underneath?',
+    size: 7,
     colors: C4,
     pieces: 'easy',
     photo: 'plaid-hood',
-    cover: [
-      '........',
-      '........',
-      '..1111..',
-      '..1111..',
-      '..1111..',
-      '..1111..',
-      '........',
-      '........',
-    ],
+    cover: 1,
     goals: [{ type: 'reveal' }],
-    stars: { two: { maxMoves: 16 }, three: { maxMoves: 11 } },
+    stars: { two: { maxMoves: 24 }, three: { maxMoves: 18 } },
   },
   {
     id: 'l22',

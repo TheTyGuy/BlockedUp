@@ -116,8 +116,9 @@ describe('photo level data', () => {
       const wantsReveal = level.goals.some((g) => g.type === 'reveal');
       if (!wantsReveal) continue;
       expect(
-        parseCover(level)!.some((n) => n > 0),
-        level.id,
+        // Every cell starts covered, so the photo is a surprise.
+        parseCover(level)!.every((n) => n > 0),
+        `${level.id} fully covered`,
       ).toBe(true);
       expect(level.photo && ids.has(level.photo), `${level.id} photo`).toBe(true);
       expect(existsSync(`public/photos/${level.photo}.jpg`), `${level.photo}.jpg`).toBe(true);

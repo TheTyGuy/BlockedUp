@@ -23,7 +23,7 @@ export function goalLabel(spec: GoalSpec, target: number): string {
     case 'survive':
       return `Place ${target} pieces`;
     case 'reveal':
-      return 'Uncover the photo';
+      return 'Break every tile';
   }
 }
 
