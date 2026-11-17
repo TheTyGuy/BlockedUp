@@ -11,6 +11,8 @@ A bright, chunky, mobile-first block puzzle game. Drag pieces from your hand ont
 
 **Play it:** https://thetyguy.github.io/BlockedUp/. On a phone, use "Add to Home Screen" (iOS Safari) or "Install app" (Android Chrome) to install it.
 
+**What's next:** see [docs/ROADMAP.md](docs/ROADMAP.md) for planned worlds, open items and working agreements.
+
 ## Getting started
 
 ```bash
