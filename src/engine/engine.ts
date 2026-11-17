@@ -67,6 +67,10 @@ export function createGame(config: GameConfig, seed: number): GameState {
     endReason: null,
     mission: null,
   };
+  if (config.cover?.some((n) => n > 0)) {
+    if (config.cover.length !== board.cells.length) throw new Error('cover has the wrong size');
+    state.cover = config.cover.map((n) => Math.max(0, Math.floor(n)));
+  }
   if (config.mission) state.mission = createMissionState(config.mission, state);
   if (!handFits(state).some(Boolean)) {
     state.status = 'lost';
@@ -107,6 +111,7 @@ function applyPlace(state: GameState, action: Extract<Action, { type: 'place' }>
   const stats = { ...state.stats };
   const startScore = state.score;
   let score = state.score;
+  let cover = state.cover;
 
   // 1. Place the piece.
   const placed = cellsFor(shape, action.row, action.col);
@@ -145,6 +150,27 @@ function applyPlace(state: GameState, action: Extract<Action, { type: 'place' }>
       points: pts,
       combo,
     });
+    // Cover tiles under every cell of a cleared line take one hit.
+    if (cover) {
+      const hit = new Set<number>();
+      for (const r of rows) for (let c = 0; c < board.width; c++) hit.add(r * board.width + c);
+      for (const c of cols) for (let r = 0; r < board.height; r++) hit.add(r * board.width + c);
+      const damaged: { row: number; col: number; layers: number }[] = [];
+      const nextCover = cover.slice();
+      for (const i of [...hit].sort((a, b) => a - b)) {
+        if (nextCover[i] <= 0) continue;
+        nextCover[i]--;
+        damaged.push({
+          row: Math.floor(i / board.width),
+          col: i % board.width,
+          layers: nextCover[i],
+        });
+      }
+      if (damaged.length > 0) {
+        cover = nextCover;
+        events.push({ type: 'coverDamaged', cells: damaged });
+      }
+    }
     if (isEmpty(board) && cfg.scoring.allClearBonus > 0) {
       score += cfg.scoring.allClearBonus;
       events.push({ type: 'boardCleared', points: cfg.scoring.allClearBonus });
@@ -182,6 +208,7 @@ function applyPlace(state: GameState, action: Extract<Action, { type: 'place' }>
     combo,
     placements,
     stats,
+    ...(cover ? { cover } : {}),
   };
 
   // 4. Missions: update goal progress, then check win / lose.

@@ -31,6 +31,16 @@ const easeOutBack = (t: number) => {
   return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
 };
 
+/** Cover-tile colours (the slabs hiding a photo). */
+const COVER_COLOR: BlockColor = {
+  name: 'Cover',
+  base: '#4b4196',
+  light: '#6f64c4',
+  dark: '#2c2566',
+  pattern: 'stone',
+};
+const COVER_HIT_MS = 420;
+
 const FONT = `ui-rounded, "SF Pro Rounded", "Nunito", "Arial Rounded MT Bold", system-ui, sans-serif`;
 
 interface Layout {
@@ -136,6 +146,9 @@ export class BoardView {
   private dealStart = -1e9;
   private shake = { start: -1e9, dur: 0, mag: 0 };
   private endStart = -1;
+  private photo: HTMLImageElement | null = null;
+  /** Cover tiles that were just hit: cell index -> when (for the crack flash). */
+  private coverHits = new Map<number, number>();
   private wonStart = -1;
 
   /** When true, input is ignored (pause menu / end of game). */
@@ -144,7 +157,17 @@ export class BoardView {
   constructor(
     private container: HTMLElement,
     private session: GameSession,
+    opts: { photoUrl?: string } = {},
   ) {
+    if (opts.photoUrl) {
+      // The photo hidden under this level's cover tiles.
+      const img = new Image();
+      img.onload = () => {
+        this.photo = img;
+        this.invalidate();
+      };
+      img.src = opts.photoUrl;
+    }
     this.canvas = document.createElement('canvas');
     this.canvas.className = 'board-canvas';
     this.ctx = this.canvas.getContext('2d')!;
@@ -424,6 +447,21 @@ export class BoardView {
           }
           break;
         }
+        case 'coverDamaged': {
+          let broke = 0;
+          for (const c of e.cells) {
+            const delay =
+              Math.hypot(c.row - (center.y - boardY) / cell, c.col - (center.x - boardX) / cell) *
+              28;
+            this.coverHits.set(c.row * state.board.width + c.col, now + delay);
+            if (c.layers === 0) {
+              broke++;
+              this.spawnParticles(c.row, c.col, COVER_COLOR, now + delay, 1);
+            }
+          }
+          if (broke > 0) haptics.place();
+          break;
+        }
         case 'boardCleared':
           this.addText(
             'ALL CLEAR!',
@@ -696,7 +734,18 @@ export class BoardView {
 
     busy = this.drawParticles(now) || busy;
     busy = this.drawTexts(now) || busy;
+    if (this.coverHits.size > 0) busy = true;
     if (this.wonStart >= 0 && now - this.wonStart < 3000) busy = true;
+    // Level won: the blocks fade away to show the whole photo.
+    if (this.photo && this.wonStart >= 0 && now >= this.wonStart) {
+      const a = easeOutCubic(clamp01((now - this.wonStart) / 700));
+      ctx.save();
+      ctx.globalAlpha = a;
+      roundRect(ctx, L.boardX, L.boardY, L.boardW, L.boardH, L.cell * 0.2);
+      ctx.clip();
+      ctx.drawImage(this.photo, L.boardX, L.boardY, L.boardW, L.boardH);
+      ctx.restore();
+    }
     return busy;
   }
 
@@ -717,21 +766,98 @@ export class BoardView {
     ctx.strokeStyle = 'rgba(255,255,255,0.08)';
     ctx.lineWidth = 2;
     ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.055)';
     const g = Math.max(1, L.cell * 0.05);
+    const cover = state.cover;
+    const startCover = state.config.cover;
+    const photo = this.photo;
+    const now = performance.now();
     for (let r = 0; r < state.board.height; r++) {
       for (let c = 0; c < state.board.width; c++) {
-        roundRect(
-          ctx,
-          L.boardX + c * L.cell + g,
-          L.boardY + r * L.cell + g,
-          L.cell - 2 * g,
-          L.cell - 2 * g,
-          L.cell * 0.16,
-        );
-        ctx.fill();
+        const i = r * state.board.width + c;
+        const x = L.boardX + c * L.cell;
+        const y = L.boardY + r * L.cell;
+        const layers = cover?.[i] ?? 0;
+        const showPhoto = photo !== null && cover !== undefined;
+
+        if (showPhoto && layers === 0) {
+          // This cell's slice of the photo, visible once its tile has broken.
+          const sw = photo.naturalWidth / state.board.width;
+          const sh = photo.naturalHeight / state.board.height;
+          ctx.drawImage(photo, c * sw, r * sh, sw, sh, x + 0.5, y + 0.5, L.cell - 1, L.cell - 1);
+          // Slightly dimmed while playing so blocks stand out; full brightness on the win.
+          ctx.fillStyle = 'rgba(12,8,40,0.24)';
+          ctx.fillRect(x + 0.5, y + 0.5, L.cell - 1, L.cell - 1);
+        } else if (!cover || layers === 0) {
+          ctx.fillStyle = 'rgba(255,255,255,0.055)';
+          roundRect(ctx, x + g, y + g, L.cell - 2 * g, L.cell - 2 * g, L.cell * 0.16);
+          ctx.fill();
+        }
+
+        // A tile only looks cracked once it has actually been hit.
+        if (layers > 0) {
+          this.drawCoverTile(x, y, (startCover?.[i] ?? layers) - layers, layers, i);
+        }
+
+        const hit = this.coverHits.get(i);
+        if (hit !== undefined) {
+          const t = (now - hit) / COVER_HIT_MS;
+          if (t >= 1) this.coverHits.delete(i);
+          else if (t >= 0) {
+            ctx.fillStyle = `rgba(255,255,255,${0.7 * (1 - t)})`;
+            ctx.fillRect(x, y, L.cell, L.cell);
+          }
+        }
       }
     }
+  }
+
+  /** A cover slab. Always opaque, so nothing underneath shows until it breaks. */
+  private drawCoverTile(x: number, y: number, hits: number, layers: number, index: number): void {
+    const cracked = hits > 0;
+    const { ctx, L } = this;
+    const s = L.cell;
+    const g = Math.max(0.5, s * 0.03);
+    ctx.fillStyle = COVER_COLOR.dark;
+    roundRect(ctx, x + g, y + g, s - 2 * g, s - 2 * g, s * 0.14);
+    ctx.fill();
+    ctx.fillStyle = cracked ? COVER_COLOR.base : COVER_COLOR.light;
+    roundRect(ctx, x + g, y + g, s - 2 * g, s - 2 * g - s * 0.07, s * 0.14);
+    ctx.fill();
+    if (!cracked) {
+      ctx.fillStyle = 'rgba(255,255,255,0.14)';
+      roundRect(ctx, x + s * 0.16, y + s * 0.12, s * 0.34, s * 0.09, s * 0.045);
+      ctx.fill();
+      // Thick tiles get one inner frame per extra clear they need, so they can be planned around.
+      ctx.strokeStyle = 'rgba(28,20,80,0.55)';
+      ctx.lineWidth = Math.max(1, s * 0.05);
+      for (let f = 0; f < Math.min(layers - 1, 2); f++) {
+        const inset = s * (0.2 + f * 0.12);
+        roundRect(ctx, x + inset, y + inset, s - 2 * inset, s * 0.93 - 2 * inset, s * 0.1);
+        ctx.stroke();
+      }
+      return;
+    }
+    // Crack lines, varied per cell but stable from frame to frame.
+    const k = (n: number) => (((index + 1) * 9301 + n * 49297) % 233280) / 233280;
+    const cx = x + s * (0.4 + 0.2 * k(1));
+    const cy = y + s * (0.4 + 0.2 * k(2));
+    ctx.strokeStyle = 'rgba(20,14,60,0.8)';
+    ctx.lineWidth = Math.max(1, s * 0.045);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    // More cracks the closer the tile is to breaking.
+    const lines = layers === 1 ? 5 : 3;
+    for (let a = 0; a < lines; a++) {
+      const ang = (a / lines) * Math.PI * 2 + k(3 + a) * 1.2;
+      const len = s * (0.3 + 0.16 * k(7 + a));
+      const mx = cx + Math.cos(ang) * len * 0.5 + (k(11 + a) - 0.5) * s * 0.12;
+      const my = cy + Math.sin(ang) * len * 0.5 + (k(15 + a) - 0.5) * s * 0.12;
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(mx, my);
+      ctx.lineTo(cx + Math.cos(ang) * len, cy + Math.sin(ang) * len);
+    }
+    ctx.stroke();
   }
 
   private drawPiece(

@@ -3,7 +3,8 @@ import type { App, Screen } from '../app';
 import { h, starsText } from '../dom';
 import { store } from '../storage';
 import { DIFFICULTIES, DIFFICULTY_ORDER } from '../../data/difficulties';
-import { LEVELS } from '../../data/levels';
+import { LEVELS, WORLDS } from '../../data/levels';
+import { PHOTOS, photoUrl } from '../../data/photos';
 import { startEndless, startMission } from './game';
 import { BLOCK_COLORS } from '../theme';
 import { versusMenuScreen } from './lobby';
@@ -35,6 +36,7 @@ function topBar(title: string, onBack: () => void): HTMLElement {
 
 export const homeScreen = (app: App): Screen => {
   const stars = store.totalStars();
+  const photosWon = unlockedPhotoIds().size;
   return {
     el: h(
       'div',
@@ -60,6 +62,15 @@ export const homeScreen = (app: App): Screen => {
           '2 Players',
           h('small', {}, 'Garbage Attack · online or same device'),
         ),
+        // The album stays hidden until the first photo is won, so it's a surprise.
+        photosWon > 0
+          ? h(
+              'button',
+              { class: 'btn btn-ghost', onclick: () => app.show(albumScreen) },
+              'Album',
+              h('small', {}, `${photosWon} of ${PHOTOS.length} photos`),
+            )
+          : null,
         h(
           'button',
           { class: 'btn btn-ghost', onclick: () => app.show(settingsScreen) },
@@ -116,30 +127,126 @@ export function isUnlocked(index: number): boolean {
 }
 
 export const levelsScreen = (app: App): Screen => {
-  const grid = h('div', { class: 'level-grid' });
-  LEVELS.forEach((level, i) => {
-    const progress = store.level(level.id);
-    const unlocked = isUnlocked(i);
-    grid.append(
+  const sections: HTMLElement[] = [];
+  for (const world of WORLDS) {
+    const grid = h('div', { class: 'level-grid' });
+    let stars = 0;
+    let count = 0;
+    LEVELS.forEach((level, i) => {
+      if ((level.world ?? 1) !== world.id) return;
+      const progress = store.level(level.id);
+      const unlocked = isUnlocked(i);
+      stars += progress?.stars ?? 0;
+      count++;
+      grid.append(
+        h(
+          'button',
+          {
+            class: `level-btn ${unlocked ? '' : 'locked'} ${progress ? 'done' : ''}`,
+            disabled: !unlocked,
+            'aria-label': `Level ${i + 1}: ${level.name}`,
+            onclick: () => startMission(app, level.id),
+          },
+          h('span', { class: 'level-num' }, unlocked ? String(i + 1) : '🔒'),
+          h('span', { class: 'level-stars' }, starsText(progress?.stars ?? 0)),
+          h('span', { class: 'level-size' }, `${level.size}×${level.size}`),
+        ),
+      );
+    });
+    if (count === 0) continue;
+    sections.push(
       h(
-        'button',
-        {
-          class: `level-btn ${unlocked ? '' : 'locked'} ${progress ? 'done' : ''}`,
-          disabled: !unlocked,
-          'aria-label': `Level ${i + 1}: ${level.name}`,
-          onclick: () => startMission(app, level.id),
-        },
-        h('span', { class: 'level-num' }, unlocked ? String(i + 1) : '🔒'),
-        h('span', { class: 'level-stars' }, starsText(progress?.stars ?? 0)),
-        h('span', { class: 'level-size' }, `${level.size}×${level.size}`),
+        'section',
+        { class: 'world' },
+        h(
+          'div',
+          { class: 'world-head' },
+          h('h3', {}, `World ${world.id} · ${world.name}`),
+          h('span', { class: 'world-stars' }, `★ ${stars}/${count * 3}`),
+        ),
+        h('p', { class: 'subtle small' }, world.blurb),
+        grid,
       ),
     );
-  });
+  }
   const el = h(
     'div',
     { class: 'screen menu' },
     topBar('Missions', () => app.show(homeScreen)),
     h('p', { class: 'subtle center' }, `★ ${store.totalStars()} of ${LEVELS.length * 3}`),
+    ...sections,
+  );
+  // Open on the world the player is currently working through.
+  requestAnimationFrame(() => {
+    const next = el.querySelector('.level-btn:not(.locked):not(.done)');
+    next?.closest('.world')?.scrollIntoView({ block: 'start' });
+  });
+  return { el };
+};
+
+/** Photos won on photo levels. A photo is unlocked once its level has been beaten. */
+export function unlockedPhotoIds(): Set<string> {
+  const ids = new Set<string>();
+  for (const level of LEVELS) {
+    if (level.photo && (store.level(level.id)?.stars ?? 0) > 0) ids.add(level.photo);
+  }
+  return ids;
+}
+
+export const albumScreen = (app: App): Screen => {
+  const unlocked = unlockedPhotoIds();
+  const grid = h('div', { class: 'album-grid' });
+  for (const photo of PHOTOS) {
+    const level = LEVELS.findIndex((l) => l.photo === photo.id);
+    grid.append(
+      unlocked.has(photo.id)
+        ? h(
+            'button',
+            {
+              class: 'album-item',
+              'aria-label': `View ${photo.title}`,
+              onclick: () => {
+                const close = () => viewer.remove();
+                const viewer = h(
+                  'div',
+                  { class: 'overlay photo-viewer', onclick: close },
+                  h(
+                    'figure',
+                    { class: 'photo-card big' },
+                    h('img', {
+                      src: photoUrl(photo.id),
+                      alt: photo.title,
+                      width: 640,
+                      height: 640,
+                    }),
+                    h('figcaption', {}, photo.title),
+                  ),
+                );
+                el.append(viewer);
+              },
+            },
+            h('img', {
+              src: photoUrl(photo.id),
+              alt: '',
+              width: 640,
+              height: 640,
+              loading: 'lazy',
+            }),
+            h('span', {}, photo.title),
+          )
+        : h(
+            'div',
+            { class: 'album-item locked' },
+            h('div', { class: 'album-mystery' }, '?'),
+            h('span', {}, level >= 0 ? `Beat level ${level + 1}` : 'Coming soon'),
+          ),
+    );
+  }
+  const el = h(
+    'div',
+    { class: 'screen menu' },
+    topBar('Album', () => app.show(homeScreen)),
+    h('p', { class: 'subtle center' }, `${unlocked.size} of ${PHOTOS.length} photos uncovered`),
     grid,
   );
   return { el };

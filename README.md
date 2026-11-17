@@ -152,7 +152,30 @@ Levels unlock in array order. Then:
 2. `npm test` validates every level: unique ids, layout dimensions, colour goals that can actually be met, and a playable start.
 3. `npm run simulate` shows how a simple greedy bot does on it. A human who plans ahead does better, so treat the bot's win rate as a relative signal.
 
-**Goal types:** `clearRows`, `clearCols`, `clearLines`, `blastColor` (+`color`), `score`, `combo` (streak length), `multiClear` (lines in one placement), `clearObstacles` (target = stones on the starting board), `survive` (pieces placed). All except `clearObstacles` take a `target`.
+**Goal types:** `reveal` (photo levels, see below), `clearRows`, `clearCols`, `clearLines`, `blastColor` (+`color`), `score`, `combo` (streak length), `multiClear` (lines in one placement), `clearObstacles` (target = stones on the starting board), `survive` (pieces placed). All except `clearObstacles` take a `target`.
+
+### Photo levels (World 2)
+
+A photo level hides a picture under **cover tiles**. Clearing a line hits the tile under every cell of that line; a tile with 2 layers cracks first and breaks on the second hit. The level is won with the goal `{ type: 'reveal' }`, when every tile is broken. Winning adds the photo to the **Album** on the home screen.
+
+```ts
+{
+  id: 'l31',
+  world: 2,                    // which section of the level list (see WORLDS in levels.ts)
+  name: 'Zoomies',
+  size: 8,
+  colors: ['red', 'blue', 'yellow', 'green'],
+  pieces: 'easy',
+  photo: 'zoomies',            // id from src/data/photos.ts
+  cover: 2,                    // every cell needs 2 clears...
+  // cover: ['11111111', '11222211', ...],  // ...or set layers per cell (cover every cell)
+  goals: [{ type: 'reveal' }],
+  moveLimit: 90,
+  stars: { two: { maxMoves: 60 }, three: { maxMoves: 48 } },
+}
+```
+
+To add a photo: save a square 640px JPEG as `public/photos/{id}.jpg` and add `{ id, title }` to `src/data/photos.ts`. The site is public, so crop out people and re-save the image (which drops location data) before adding it. Covers combine with everything else: layouts with stones, move limits and extra goals.
 
 ## How to add a mission goal type
 

@@ -1,6 +1,7 @@
 /** Results screen for both Endless and Missions. */
 import { DIFFICULTIES } from '../../data/difficulties';
 import { LEVELS, levelIndex } from '../../data/levels';
+import { getPhoto, photoUrl } from '../../data/photos';
 import type { App, Screen } from '../app';
 import { h } from '../dom';
 import type { GameSession } from '../game/session';
@@ -63,6 +64,7 @@ export function resultsScreen(app: App, session: GameSession, newBest: boolean):
   const idx = levelIndex(mode.levelId);
   const level = LEVELS[idx];
   const won = s.status === 'won';
+  const photo = level.photo ? getPhoto(level.photo) : undefined;
   const stars = won ? s.mission!.stars : 0;
   const next = LEVELS[idx + 1];
   const starEls = h(
@@ -107,6 +109,14 @@ export function resultsScreen(app: App, session: GameSession, newBest: boolean):
       { class: 'screen menu results' },
       h('h2', { class: 'results-title' }, won ? 'Level complete!' : reason),
       h('div', { class: 'subtle' }, `Level ${idx + 1} · ${level.name}`),
+      won && photo
+        ? h(
+            'figure',
+            { class: 'photo-card' },
+            h('img', { src: photoUrl(photo.id), alt: photo.title, width: 640, height: 640 }),
+            h('figcaption', {}, `“${photo.title}” added to your album`),
+          )
+        : null,
       won ? starEls : null,
       h('div', { class: 'big-score' }, String(s.score)),
       goals,

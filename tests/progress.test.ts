@@ -14,8 +14,7 @@ import { STORAGE_KEY, defaultSave, isResumableGame, parseSave } from '../src/ui/
  * add levels; never edit or delete existing entries.
  */
 const SHIPPED_LEVEL_IDS = [
-  'l01', 'l02', 'l03', 'l04', 'l05', 'l06', 'l07', 'l08', 'l09', 'l10',
-  'l11', 'l12', 'l13', 'l14', 'l15', 'l16', 'l17', 'l18', 'l19', 'l20',
+  'l01', 'l02', 'l03', 'l04', 'l05', 'l06', 'l07', 'l08', 'l09', 'l10', 'l11', 'l12', 'l13', 'l14', 'l15', 'l16', 'l17', 'l18', 'l19', 'l20', 'l21', 'l22', 'l23', 'l24', 'l25', 'l26', 'l27', 'l28', 'l29', 'l30', 'l31', 'l32', 'l33', 'l34', 'l35', 'l36', 'l37', 'l38', 'l39', 'l40',
 ]; // prettier-ignore
 
 describe('progress safety', () => {

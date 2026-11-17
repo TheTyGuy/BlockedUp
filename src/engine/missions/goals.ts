@@ -97,3 +97,11 @@ registerGoal({
   target: fromTarget,
   reduce: (p, e, _spec, state) => (e.type === 'piecePlaced' ? Math.max(p, state.placements) : p),
 });
+
+registerGoal({
+  type: 'reveal',
+  // Target = number of covered cells at the start of the level.
+  target: (_spec, initial) => (initial.cover ?? []).filter((n) => n > 0).length,
+  reduce: (p, e) =>
+    e.type === 'coverDamaged' ? p + e.cells.filter((c) => c.layers === 0).length : p,
+});
